@@ -1,8 +1,6 @@
 <template>
   <div>
-    <div v-if="error">{{ error }}</div>
     <a-table
-      v-if="!error"
       :data-source="data.clients"
       :row-key="(client) => client.id"
       :columns="columns"
@@ -86,8 +84,9 @@ import gql from 'graphql-tag';
 export default {
   data() {
     return {
+      test: 'Marks',
+      sorterInfo:  {},
       data: { clients: [], totalCount: 0 },
-      error: false,
       pagination: {
         showSizeChanger: true,
         pageSize: 50,
@@ -97,94 +96,30 @@ export default {
       searchText: '',
       searchInput: null,
       searchedColumn: '',
-      columns: [
+    columns:[
         {
           title: 'Name',
           dataIndex: 'name',
           key: 'name',
-          scopedSlots: {
-            filterDropdown: 'filterDropdown',
-            filterIcon: 'filterIcon',
-            customRender: 'customRender',
-          },
+          sortOrder: this.sorterInfo.columnKey === 'name' && this.sorterInfo.order,
           sorter: (a, b) =>
             a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
-          onFilter: (value, record) =>
-            record.name
-              .toString()
-              .toLowerCase()
-              .includes(value.toLowerCase()),
-          onFilterDropdownVisibleChange: (visible) => {
-            if (visible) {
-              setTimeout(() => {
-                this.searchInput.focus();
-              }, 0);
-            }
-          },
         },
         {
           title: 'Addresses',
           dataIndex: 'address',
           key: 'address',
-          scopedSlots: {
-            filterDropdown: 'filterDropdown',
-            filterIcon: 'filterIcon',
-            customRender: 'customRender',
-          },
-          onFilter: (value, record) =>
-            record.address
-              .toString()
-              .toLowerCase()
-              .includes(value.toLowerCase()),
-          onFilterDropdownVisibleChange: (visible) => {
-            if (visible) {
-              setTimeout(() => {
-                this.searchInput.focus();
-              }, 0);
-            }
-          },
         },
         {
           title: 'Email',
           dataIndex: 'email',
-          key: 'contacts[0].email[0]',
-          scopedSlots: {
-            filterDropdown: 'filterDropdown',
-            filterIcon: 'filterIcon',
-            customRender: 'customRender',
-          },
-          onFilter: (value, record) =>
-            this.onColumnFilter(value, record, 'email'),
-          onFilterDropdownVisibleChange: (visible) => {
-            if (visible) {
-              setTimeout(() => {
-                this.searchInput.focus();
-              });
-            }
-          },
+          key: "contacts",
+          width:500
         },
         {
           title: 'Phone',
           dataIndex: 'phone',
           key: 'contacts[0].phone[0]',
-          scopedSlots: {
-            filterDropdown: 'filterDropdown',
-            filterIcon: 'filterIcon',
-            customRender: 'customRender',
-          },
-          onFilter: (value, record) => {
-            return record.phone
-              .toString()
-              .toLowerCase()
-              .includes(value.toLowerCase());
-          },
-          onFilterDropdownVisibleChange: (visible) => {
-            if (visible) {
-              setTimeout(() => {
-                this.searchInput.focus();
-              });
-            }
-          },
         },
         {
           title: 'Created At',
@@ -192,8 +127,10 @@ export default {
           key: 'createdAt',
         },
       ],
+      
     };
   },
+  props:['filterData'],
   apollo: {
     data: {
       query: gql`
@@ -223,14 +160,34 @@ export default {
       variables() {
         return {
           skip: this.pagination.pageSize * (this.pagination.current - 1),
-          take: this.pagination.pageSize,
+          take: this.pagination.pageSize
         };
       },
       error(error) {
-        this.error = JSON.stringify(error);
+        this.$emit('error-occured', JSON.stringify(error));
+        this.data = {clients:[], totalCount:0}
       },
       update: (queryRes) => {
-        var clients = [];
+        var clients = []
+        // queryRes.data.clients.map(client => {
+        //   let newClient = {};
+        //   if(client.addresses && client.addresses.length>0){
+        //     newClient.streetName = client.addresses[0].streetName;
+        //     newClient.streetNumber = client.addresses[0].streetNumber;
+        //     newClient.officeNumber = client.addresses[0].officeNumber;
+        //   }
+        //   if(client.contacts && client.contacts.length>0){
+        //     newClient.name = client.contacts[0].name;
+        //     newClient.surname = client.contacts[0].surname;
+        //     if(client.contacts[0].phones && client.contacts[0].phones.length > 0){
+        //       newClient.phone = client.contacts[0].phones[0];
+        //     }
+        //     if(client.contacts[0].emails && client.contacts[0].emails.length > 0){
+        //       newClient.email = client.contacts[0].emails[0];
+        //     }
+        //   }
+        //   return newClient;
+        // });
         let prevClients = queryRes.data.clients;
         for (let i = 0; i < prevClients.length; i++) {
           let client = prevClients[i];
@@ -252,9 +209,52 @@ export default {
       },
     },
   },
-  // mounted() {
-  //   this.fetch();
-  // },
+  mounted() {
+    this.sorterInfo = JSON.parse(localStorage.sorterInfo|| {}) ;
+  },
+  watch: {
+    sorterInfo(newValue){
+      localStorage.sorterInfo = JSON.stringify(newValue);
+    },
+    filterData(newValue){
+      this.filterData = newValue;
+      this.$apollo.queries.data.refetch().then(()=>{
+        this.data.clients.forEach(client=>console.log(client))
+        if(this.filterData.text && this.filterData.text.length){
+          this.data.clients = this.data.clients.filter(client => 
+            (
+              client.name.includes(this.filterData.text) 
+              || 
+              (
+                client.addresses.length>0 
+                &&
+                (
+                  client.addresses[0].streetName.includes(this.filterData.text) 
+                  ||   
+                  client.addresses[0].streetNumber==this.filterData.text 
+                  || 
+                  client.addresses[0].officeNumber==this.filterData.text 
+                )
+              ) 
+              ||
+              (
+                client.contacts.length>0 
+                &&
+                (
+                  client.contacts[0].name.includes(this.filterData.text) 
+                  || 
+                  client.contacts[0].surname.includes(this.filterData.text) 
+                  || 
+                  client.contacts[0].phones[0].includes(this.filterData.text) 
+                  || 
+                  client.contacts[0].emails[0].includes(this.filterData.text) 
+                )
+              ) 
+            ))
+        }
+      });
+    }
+  },
   methods: {
     onColumnFilter(value, record, column) {
       return record[column]
@@ -266,51 +266,23 @@ export default {
       confirm();
       this.searchText = selectedKeys[0];
       this.searchedColumn = dataIndex;
+      console.log(this.filteredValues);
     },
 
     handleReset(clearFilters) {
       clearFilters();
       this.searchText = '';
     },
-    handleTableChange(pagination) {
-      console.log(
-        pagination +
-          '\n' +
-          pagination.pageSize * (pagination.current - 1) +
-          '\n' +
-          pagination.pageSize
-      );
+    handleTableChange(pagination, filters, sorter) {
       this.pagination = {
         ...this.pagination,
         current: pagination.current,
         pageSize: pagination.pageSize,
       };
+      this.sorterInfo = sorter || {};
       // this.fetch({
       //   results: pagination.pageSize,
       //   page: pagination.current,
-      // });
-    },
-    fetch(params = {}) {
-      console.log('params:', params);
-      this.loading = true;
-      // this.data = this.clients.data.clients;
-      // this.pagination.total = this.clients.data.totalCount;
-      // reqwest({
-      //   url: 'https://randomuser.me/api',
-      //   method: 'get',
-      //   data: {
-      //     results: 10,
-      //     ...params,
-      //   },
-      //   type: 'json',
-      // }).then((data) => {
-      //   const pagination = { ...this.pagination };
-      //   // Read total count from server
-      //   // pagination.total = data.totalCount;
-      //   pagination.total = 200;
-      //   this.loading = false;
-      //   this.data = data.results;
-      //   this.pagination = pagination;
       // });
     },
   },

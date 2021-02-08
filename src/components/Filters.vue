@@ -24,20 +24,18 @@ export default {
       form: this.$form.createForm(this, { name: 'coordinated' }),
     };
   },
-  methods:{
-    
-      handleSubmit(e) {
-        e.preventDefault();
-        let values = this.form.getFieldsValue();
-        this.$emit('submitted', values);
-      },
-      handleSelectChange(value) {
-        console.log(value);
-        this.form.setFieldsValue({
-          note: `Hi, ${value === 'male' ? 'man' : 'lady'}!`,
-        });
-      }
-     
+  methods: {
+    handleSubmit(e) {
+      e.preventDefault();
+      let text = this.form.getFieldValue('text');
+      this.$emit('submitted', text);
+    },
+    handleSelectChange(value) {
+      console.log(value);
+      this.form.setFieldsValue({
+        note: `Hi, ${value === 'male' ? 'man' : 'lady'}!`,
+      });
+    },
   },
 };
 </script>

@@ -2,7 +2,7 @@
   <div id="app">
     <ErrorMessage :errorMessage="errorMessage"></ErrorMessage>
     <Filters v-on:submitted="onSubmit"></Filters>
-    <Table :filterData="filterData" v-on:error-occured="onError"></Table>
+    <Table :searchText="searchText" v-on:error-occured="onError"></Table>
   </div>
 </template>
 
@@ -15,24 +15,22 @@ export default {
   components: {
     Table,
     Filters,
-    ErrorMessage
+    ErrorMessage,
   },
-  data(){
-    return{
-      filterData:{},
-      errorMessage:''
-    }
+  data() {
+    return {
+      searchText: '',
+      errorMessage: '',
+    };
   },
-  methods:{
-    onError(message){
-      console.log(message)
+  methods: {
+    onError(message) {
       this.errorMessage = message;
     },
-    onSubmit(filterData){
-      console.log(filterData)
-      this.filterData = filterData;
-    }
-  }
+    onSubmit(searchText) {
+      this.searchText = searchText;
+    },
+  },
 };
 </script>
 

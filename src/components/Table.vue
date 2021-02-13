@@ -1,7 +1,7 @@
 <template>
   <div>
     <a-table
-      :data-source="data.clients"
+      :data-source="dataS.clients"
       :row-key="(client) => client.id"
       :columns="columns"
       :pagination="{ ...pagination, total: data.totalCount }"
@@ -159,7 +159,9 @@ export default {
     // order(newValue) {
     //   localStorage.order = JSON.stringify(newValue);
     // },
-    searchText(newValue) {
+  },
+  computed: {
+    dataS() {
       let fieldsToCompare = [
         'company',
         'streetName',
@@ -170,23 +172,23 @@ export default {
         'phone',
         'email',
       ];
-      let searchKey = newValue.toString().toLowerCase();
-      this.$apollo.queries.data.refetch().then(() => {
-        if (searchKey.length) {
-          this.data.clients = this.data.clients.filter((client) => {
-            // returns false if any of client's properties doesn't match with searched text
-            for (let i = 0; i < fieldsToCompare.length; i++) {
-              let clientField = client[fieldsToCompare[i]]
-                .toString()
-                .toLowerCase();
-              if (clientField.includes(searchKey)) {
-                return true;
-              }
+      let searchKey = this.searchText.toString().toLowerCase();
+      let clients = JSON.parse(JSON.stringify(this.data.clients));
+      if (searchKey.length) {
+        clients = clients.filter((client) => {
+          // returns false if any of client's properties doesn't match with searched text
+          for (let i = 0; i < fieldsToCompare.length; i++) {
+            let clientField = client[fieldsToCompare[i]]
+              .toString()
+              .toLowerCase();
+            if (clientField.includes(searchKey)) {
+              return true;
             }
-            return false;
-          });
-        }
-      });
+          }
+          return false;
+        });
+      }
+      return { ...this.data, clients };
     },
   },
   methods: {
